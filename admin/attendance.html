@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Attendance Monitoring | Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #FFF; color: #000; display: flex; min-height: 100vh; }
+    #sidebar-container { display: contents; }
+    aside { width: 260px; background: #FFF; border-right: 2px solid #0047AB; display: flex; flex-direction: column; justify-content: space-between; padding: 24px; flex-shrink: 0; }
+    .sidebar-brand h2 { font-size: 1.4rem; color: #0047AB; margin-bottom: 6px; }
+    .sidebar-brand p { font-size: .85rem; color: #555; }
+    .sidebar-menu { list-style: none; margin-top: 30px; flex-grow: 1; }
+    .sidebar-menu li { margin-bottom: 12px; }
+    .sidebar-menu a { display: block; padding: 10px 14px; color: #000; text-decoration: none; font-weight: 500; border-radius: 8px; transition: background .2s, color .2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: #0047AB; color: #FFF; }
+    .logout-btn { display: block; padding: 10px 14px; background: #FFF; color: #0047AB; border: 1px solid #0047AB; text-align: center; text-decoration: none; font-weight: 600; border-radius: 8px; transition: all .2s; }
+    .logout-btn:hover { background: #0047AB; color: #FFF; }
+    main { flex-grow: 1; padding: 30px 40px; overflow-y: auto; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+    header h1 { font-size: 1.8rem; }
+    .admin-profile-badge { font-size: .9rem; color: #555; font-weight: 600; }
+    .form-card { border: 2px solid #0047AB; border-radius: 12px; padding: 24px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,71,171,.06); }
+    .form-card h3 { font-size: 1.2rem; color: #0047AB; margin-bottom: 18px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 18px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+    .form-group input, .form-group select { padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: .9rem; outline: none; background: #FFF; }
+    .form-group input:focus, .form-group select:focus { border-color: #0047AB; }
+    .btn-row { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+    .btn-primary { padding: 10px 22px; background: #0047AB; color: #FFF; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #003380; }
+    .btn-primary:disabled { background: #7a9ad0; cursor: not-allowed; }
+    .btn-green { padding: 10px 22px; background: #10b981; color: #FFF; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-green:hover { background: #059669; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 25px; }
+    .stat { border: 2px solid #0047AB; border-radius: 12px; padding: 16px 18px; }
+    .stat span { font-size: .82rem; color: #555; font-weight: 600; }
+    .stat b { display: block; font-size: 1.7rem; margin-top: 4px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+    .tab { padding: 8px 16px; border: 1px solid #0047AB; background: #FFF; color: #0047AB; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .tab.active { background: #0047AB; color: #FFF; }
+    .tools { margin-left: auto; display: flex; gap: 12px; align-items: center; font-size: .85rem; }
+    .tools input[type=text] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 8px; width: 210px; }
+    .table-wrap { overflow-x: auto; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0; }
+    th, td { padding: 12px 14px; text-align: left; font-size: .87rem; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
+    th { background: #0047AB; color: #FFF; font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: .78rem; }
+    .good { background: #d1fae5; color: #065f46; }
+    .warn { background: #fef3c7; color: #92400e; }
+    .bad { background: #fee2e2; color: #991b1b; }
+    .empty { text-align: center; color: #666; font-style: italic; }
+    .note { font-size: .8rem; color: #64748b; margin: -18px 0 20px; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main>
+    <header>
+      <h1>Attendance Monitoring</h1>
+      <div class="admin-profile-badge">Role: <span data-user="title"></span> | ID: <span data-user="id"></span></div>
+    </header>
+
+    <div class="form-card">
+      <h3>Filter Attendance</h3>
+      <div class="form-grid">
+        <div class="form-group"><label for="fCourse">Course</label><select id="fCourse"></select></div>
+        <div class="form-group"><label for="fSem">Semester</label><select id="fSem"></select></div>
+        <div class="form-group"><label for="fSubject">Subject</label><select id="fSubject"></select></div>
+        <div class="form-group"><label for="fFrom">From Date</label><input type="date" id="fFrom"></div>
+        <div class="form-group"><label for="fTo">To Date</label><input type="date" id="fTo"></div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn-green" id="exportBtn">Export CSV (selected subject)</button>
+        <button type="button" class="btn-primary" id="applyBtn">View Attendance</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><span>Students Tracked</span><b id="sStudents">-</b></div>
+      <div class="stat"><span>Average Attendance</span><b id="sAvg">-</b></div>
+      <div class="stat"><span>Below 75%</span><b id="sLow" style="color:#991b1b;">-</b></div>
+      <div class="stat"><span>Records Found</span><b id="sRecords">-</b></div>
+    </div>
+
+    <div class="tabs">
+      <button type="button" class="tab active" data-tab="summary">Student Summary</button>
+      <button type="button" class="tab" data-tab="records">Daily Records</button>
+      <div class="tools">
+        <label><input type="checkbox" id="lowOnly"> Below 75% only</label>
+        <input type="text" id="search" placeholder="Search reg no / name">
+      </div>
+    </div>
+
+    <div class="table-wrap" id="summaryWrap">
+      <table>
+        <thead><tr><th>Reg No</th><th>Name</th><th>Course / Sem</th><th>Subject</th><th>Classes</th><th>Present</th><th>Absent</th><th>Attendance</th></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap" id="recordsWrap" style="display:none;">
+      <table>
+        <thead><tr><th>Date</th><th>Reg No</th><th>Name</th><th>Course / Sem</th><th>Subject</th><th>Status</th><th>Marked By</th></tr></thead>
+        <tbody id="recordsBody"></tbody>
+      </table>
+      <p class="note" style="margin-top:8px;">Showing the latest 1000 records for the selected filters.</p>
+    </div>
+  </main>
+
+  <script src="/components/portal.js"></script>
+  <script>
+    initPortal({ sidebar: '/components/admin-sidebar.html', role: 'admin', defaultPage: 'attendance.html' });
+
+    const $ = id => document.getElementById(id);
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    let courses = [], subjects = [], summary = [], records = [];
+
+    async function api(url) {
+      const res = await fetch(url);
+      if (res.status === 401) { window.location.href = '/auth/login.html'; throw new Error('Session expired'); }
+      try { return await res.json(); }
+      catch { throw new Error('Unexpected server response (' + res.status + ')'); }
+    }
+
+    const pctClass = p => p >= 75 ? 'good' : p >= 60 ? 'warn' : 'bad';
+
+    async function init() {
+      const data = await api('/api/courses');
+      if (!data.success) { alert(data.message || 'Failed to load courses.'); return; }
+      courses = data.courses;
+      $('fCourse').innerHTML = '<option value="">All Courses</option>' +
+        courses.map(c => `<option value="${esc(c.course_code)}">${esc(c.course_code)}</option>`).join('');
+      await onCourseChange();
+      await loadReport();
+    }
+
+    async function onCourseChange() {
+      const code = $('fCourse').value;
+      const c = courses.find(x => x.course_code === code);
+      let sems = '<option value="">All Semesters</option>';
+      if (c) for (let i = 1; i <= Number(c.total_semesters); i++) sems += `<option value="${i}">Semester ${i}</option>`;
+      $('fSem').innerHTML = sems;
+      subjects = [];
+      if (code) {
+        const r = await api('/api/subjects?course=' + encodeURIComponent(code));
+        if (r.success) subjects = r.subjects;
+      }
+      fillSubjects();
+    }
+
+    function fillSubjects() {
+      const sem = Number($('fSem').value) || 0;
+      const list = subjects.filter(s => !sem || Number(s.semester) === sem);
+      $('fSubject').innerHTML = '<option value="">All Subjects</option>' + list.map(s =>
+        `<option value="${s.id}">${esc(s.subject_code)} - ${esc(s.subject_name)}</option>`).join('');
+    }
+
+    function query() {
+      const p = new URLSearchParams();
+      if ($('fCourse').value) p.set('course', $('fCourse').value);
+      if ($('fSem').value) p.set('semester', $('fSem').value);
+      if ($('fSubject').value) p.set('subject_id', $('fSubject').value);
+      if ($('fFrom').value) p.set('from', $('fFrom').value);
+      if ($('fTo').value) p.set('to', $('fTo').value);
+      return p;
+    }
+
+    async function loadReport() {
+      const btn = $('applyBtn');
+      btn.disabled = true;
+      try {
+        const r = await api('/api/admin/attendance?' + query().toString());
+        if (!r.success) { alert(r.message || 'Failed to load attendance.'); return; }
+        summary = r.summary;
+        records = r.records;
+        render();
+      } catch (err) {
+        alert(err.message || 'Server communication error.');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function render() {
+      const term = $('search').value.trim().toLowerCase();
+      const low = $('lowOnly').checked;
+      const match = r => !term || r.registration_no.toLowerCase().includes(term) || r.full_name.toLowerCase().includes(term);
+
+      const rows = summary.filter(r => match(r) && (!low || r.percentage < 75));
+      $('summaryBody').innerHTML = rows.length ? rows.map(r => `
+        <tr>
+          <td><code>${esc(r.registration_no)}</code></td>
+          <td><strong>${esc(r.full_name)}</strong></td>
+          <td>${esc(r.course_code)} / Sem ${esc(r.semester)}</td>
+          <td>${esc(r.subject_code)} - ${esc(r.subject_name)}</td>
+          <td>${r.total}</td><td>${r.present}</td><td>${r.absent}</td>
+          <td><span class="pill ${pctClass(r.percentage)}">${r.percentage}%</span></td>
+        </tr>`).join('') : '<tr><td colspan="8" class="empty">No attendance data for these filters.</td></tr>';
+
+      const recs = records.filter(match);
+      $('recordsBody').innerHTML = recs.length ? recs.map(r => `
+        <tr>
+          <td>${esc(r.att_date)}</td>
+          <td><code>${esc(r.registration_no)}</code></td>
+          <td>${esc(r.full_name)}</td>
+          <td>${esc(r.course_code)} / Sem ${esc(r.semester)}</td>
+          <td>${esc(r.subject_code)}</td>
+          <td><span class="pill ${r.status === 'Present' ? 'good' : 'bad'}">${esc(r.status)}</span></td>
+          <td>${esc(r.faculty_name || '-')}</td>
+        </tr>`).join('') : '<tr><td colspan="7" class="empty">No records found.</td></tr>';
+
+      // Stats are across all students in the current filter (not the search box)
+      const students = new Set(summary.map(r => r.registration_no));
+      const totalClasses = summary.reduce((a, r) => a + r.total, 0);
+      const totalPresent = summary.reduce((a, r) => a + r.present, 0);
+      $('sStudents').textContent = students.size;
+      $('sAvg').textContent = totalClasses ? (totalPresent * 100 / totalClasses).toFixed(1) + '%' : '-';
+      $('sLow').textContent = summary.filter(r => r.percentage < 75).length;
+      $('sRecords').textContent = totalClasses;
+    }
+
+    function exportCsv() {
+      const sid = $('fSubject').value;
+      if (!sid) { alert('Select a specific subject to export its attendance sheet.'); return; }
+      const p = new URLSearchParams({ subject_id: sid });
+      if ($('fFrom').value) p.set('from', $('fFrom').value);
+      if ($('fTo').value) p.set('to', $('fTo').value);
+      window.location.href = '/api/admin/attendance/export?' + p.toString();
+    }
+
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+      const rec = t.dataset.tab === 'records';
+      $('summaryWrap').style.display = rec ? 'none' : 'block';
+      $('recordsWrap').style.display = rec ? 'block' : 'none';
+    }));
+    $('fCourse').addEventListener('change', onCourseChange);
+    $('fSem').addEventListener('change', fillSubjects);
+    $('applyBtn').addEventListener('click', loadReport);
+    $('exportBtn').addEventListener('click', exportCsv);
+    $('search').addEventListener('input', render);
+    $('lowOnly').addEventListener('change', render);
+
+    init();
+  </script>
+</body>
+</html>

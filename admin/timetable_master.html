@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Master Timetable Management | Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #FFF; color: #000; display: flex; min-height: 100vh; }
+    #sidebar-container { display: contents; }
+    aside { width: 260px; background: #FFF; border-right: 2px solid #0047AB; display: flex; flex-direction: column; justify-content: space-between; padding: 24px; flex-shrink: 0; }
+    .sidebar-brand h2 { font-size: 1.4rem; color: #0047AB; margin-bottom: 6px; }
+    .sidebar-brand p { font-size: .85rem; color: #555; }
+    .sidebar-menu { list-style: none; margin-top: 30px; flex-grow: 1; }
+    .sidebar-menu li { margin-bottom: 12px; }
+    .sidebar-menu a { display: block; padding: 10px 14px; color: #000; text-decoration: none; font-weight: 500; border-radius: 8px; transition: background .2s, color .2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: #0047AB; color: #FFF; }
+    .logout-btn { display: block; padding: 10px 14px; background: #FFF; color: #0047AB; border: 1px solid #0047AB; text-align: center; text-decoration: none; font-weight: 600; border-radius: 8px; transition: all .2s; }
+    .logout-btn:hover { background: #0047AB; color: #FFF; }
+    main { flex-grow: 1; padding: 30px 40px; overflow-y: auto; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+    header h1 { font-size: 1.8rem; }
+    .admin-profile-badge { font-size: .9rem; color: #555; font-weight: 600; }
+    .section-title { font-size: 1.3rem; font-weight: 600; }
+    .grid-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; }
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin: 15px 0 30px; }
+    .card-box { background: #FFF; border: 2px solid #0047AB; border-radius: 12px; padding: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,71,171,.06); transition: transform .2s, box-shadow .2s; }
+    .card-box:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,71,171,.12); background: #f8fafc; }
+    .card-box h3 { font-size: 1.3rem; color: #0047AB; margin-bottom: 8px; }
+    .card-box p { color: #555; font-size: .9rem; margin-bottom: 4px; }
+    .notice { grid-column: 1 / -1; background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 10px; padding: 24px; text-align: center; color: #475569; }
+    .notice a { color: #0047AB; font-weight: 600; text-decoration: none; }
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+    .back-btn { background: #e2e8f0; color: #1e293b; padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-bottom: 20px; }
+    .back-btn:hover { background: #cbd5e1; }
+    .top-edit-btn { padding: 8px 16px; background: #0047AB; color: #FFF; border: none; border-radius: 6px; font-weight: 600; font-size: .9rem; cursor: pointer; }
+    .top-edit-btn.on { background: #10b981; }
+    .table-wrap { overflow-x: auto; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; background: #FFF; border: 1px solid #e0e0e0; min-width: 900px; }
+    th, td { padding: 12px 10px; text-align: center; font-size: .88rem; border: 1px solid #e0e0e0; vertical-align: middle; }
+    th { background: #0047AB; color: #FFF; font-weight: 600; }
+    .chip { display: inline-block; padding: 6px 8px; border-radius: 6px; font-weight: 600; line-height: 1.35; }
+    .chip small { display: block; font-weight: 500; font-size: .74rem; opacity: .85; }
+    .chip.subject { background: #d1fae5; color: #065f46; }
+    .chip.break { background: #fef3c7; color: #92400e; }
+    .chip.lunch { background: #ffedd5; color: #9a3412; }
+    .chip.custom { background: #e0e7ff; color: #3730a3; }
+    .empty-slot { color: #94a3b8; font-style: italic; font-size: .82rem; }
+    .edit-slot-btn { display: block; margin: 6px auto 0; padding: 4px 10px; background: #0047AB; color: #FFF; border: none; border-radius: 4px; font-size: .75rem; cursor: pointer; }
+    .time-edit-input { width: 150px; padding: 5px 6px; font-size: .82rem; border: 1px solid #0047AB; border-radius: 4px; text-align: center; }
+    .del-slot { display: block; margin: 6px auto 0; padding: 3px 8px; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 4px; font-size: .72rem; cursor: pointer; }
+    .add-slot-row { display: none; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .add-slot-row.show { display: flex; }
+    .add-slot-row input { padding: 9px 12px; border: 1px solid #ccc; border-radius: 8px; width: 260px; }
+    .hint { font-size: .82rem; color: #64748b; margin-bottom: 14px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all .2s; }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-card { background: #FFF; border: 2px solid #0047AB; border-radius: 12px; width: 100%; max-width: 470px; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,.15); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; }
+    .modal-header h3 { font-size: 1.2rem; color: #0047AB; }
+    .close-btn { background: transparent; border: none; font-size: 1.4rem; font-weight: bold; color: #555; cursor: pointer; }
+    .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+    .form-group label { font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+    .form-group select, .form-group input[type=text] { padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: .9rem; outline: none; }
+    .form-group select:focus, .form-group input:focus { border-color: #0047AB; }
+    .check-row { flex-direction: row; align-items: center; gap: 8px; }
+    .check-row label { margin: 0; font-weight: 500; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-primary { padding: 10px 20px; background: #0047AB; color: #FFF; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #003380; }
+    .btn-primary:disabled { background: #7a9ad0; cursor: not-allowed; }
+    .btn-secondary { padding: 10px 20px; background: #e2e8f0; color: #1e293b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main>
+    <header>
+      <h1>Master Timetable Management</h1>
+      <div class="admin-profile-badge">Role: <span data-user="title"></span> | ID: <span data-user="id"></span></div>
+    </header>
+
+    <!-- STEP 1: Courses (from database) -->
+    <div id="coursesView" class="view-section active">
+      <div class="section-title">Select a Course</div>
+      <div class="grid-container" id="coursesGrid"></div>
+    </div>
+
+    <!-- STEP 2: Semesters -->
+    <div id="semestersView" class="view-section">
+      <button type="button" class="back-btn" id="backToCourses">&larr; Back to Courses</button>
+      <div class="section-title" id="semestersTitle"></div>
+      <div class="grid-container" id="semestersGrid"></div>
+    </div>
+
+    <!-- STEP 3: Timetable grid -->
+    <div id="gridView" class="view-section">
+      <button type="button" class="back-btn" id="backToSems">&larr; Back to Semesters</button>
+      <div class="grid-header-row">
+        <div class="section-title" id="gridTitle"></div>
+        <button type="button" class="top-edit-btn" id="editToggle">Edit Mode: OFF</button>
+      </div>
+      <p class="hint" id="gridHint"></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Time Slot</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th></tr>
+          </thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+      <div class="add-slot-row" id="addSlotRow">
+        <input type="text" id="newSlotLabel" placeholder="New time slot, e.g. 04:15 PM - 05:15 PM">
+        <button type="button" class="btn-primary" id="addSlotBtn">+ Add Time Slot</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Cell editor -->
+  <div class="modal-overlay" id="cellModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Edit Timetable Slot</h3>
+        <button type="button" class="close-btn" id="closeModal">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Selected Slot</label>
+        <input type="text" id="cellInfo" readonly style="background:#f8fafc;font-weight:600;padding:10px;border:1px solid #ccc;border-radius:8px;">
+      </div>
+      <div class="form-group">
+        <label for="entryType">Slot Content</label>
+        <select id="entryType">
+          <option value="subject">Subject</option>
+          <option value="custom">Plain Text (anything else)</option>
+          <option value="break">Break</option>
+          <option value="lunch">Lunch Break</option>
+          <option value="empty">Empty / No Class</option>
+        </select>
+      </div>
+      <div class="form-group" id="subjectGroup">
+        <label for="subjectSelect">Subject (this course &amp; semester only)</label>
+        <select id="subjectSelect"></select>
+      </div>
+      <div class="form-group" id="textGroup">
+        <label for="customText">Text to show</label>
+        <input type="text" id="customText" maxlength="150" placeholder="e.g. Seminar, Guest Lecture, Sports">
+      </div>
+      <div class="form-group check-row" id="allDaysGroup">
+        <input type="checkbox" id="allDays">
+        <label for="allDays">Apply to all days (Mon - Sat) for this time slot</label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelModal">Cancel</button>
+        <button type="button" class="btn-primary" id="saveCell">Confirm &amp; Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/components/portal.js"></script>
+  <script>
+    initPortal({ sidebar: '/components/admin-sidebar.html', role: 'admin', defaultPage: 'timetable_master.html' });
+
+    const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const $ = id => document.getElementById(id);
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    let courses = [];
+    let tt = { slots: [], entries: [], subjects: [] };
+    let course = null, semester = 0, editMode = false, cell = null;
+
+    async function api(url, options) {
+      const res = await fetch(url, options);
+      if (res.status === 401) { window.location.href = '/auth/login.html'; throw new Error('Session expired'); }
+      try { return await res.json(); }
+      catch { throw new Error('Unexpected server response (' + res.status + ')'); }
+    }
+    const jsonOpts = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    function showView(id) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      $(id).classList.add('active');
+    }
+
+    /* ---------- Courses ---------- */
+    async function loadCourses() {
+      const data = await api('/api/courses');
+      if (!data.success) { alert(data.message || 'Failed to load courses.'); return; }
+      courses = data.courses;
+      $('coursesGrid').innerHTML = courses.length ? courses.map(c => `
+        <div class="card-box" data-course="${esc(c.course_code)}">
+          <h3>${esc(c.course_code)}</h3>
+          <p>${esc(c.course_name)}</p>
+          <p><strong>${esc(c.total_semesters)} Semesters</strong></p>
+        </div>`).join('')
+        : `<div class="notice">No courses created yet. Go to <a href="courses.html">Course Catalog</a> first.</div>`;
+    }
+
+    function selectCourse(code) {
+      course = courses.find(c => c.course_code === code);
+      if (!course) return;
+      editMode = false;
+      $('semestersTitle').textContent = `${course.course_code} (${course.course_name}) - Select Semester`;
+      let html = '';
+      for (let s = 1; s <= Number(course.total_semesters); s++) {
+        html += `<div class="card-box" data-sem="${s}"><h3>Semester ${s}</h3><p>Click to view/edit timetable grid</p></div>`;
+      }
+      $('semestersGrid').innerHTML = html;
+      showView('semestersView');
+    }
+
+    /* ---------- Grid ---------- */
+    async function selectSemester(s) {
+      semester = s;
+      editMode = false;
+      await loadGrid();
+      showView('gridView');
+    }
+
+    async function loadGrid() {
+      const data = await api(`/api/timetable?course=${encodeURIComponent(course.course_code)}&semester=${semester}`);
+      if (!data.success) { alert(data.message || 'Failed to load timetable.'); return; }
+      tt = data;
+      renderGrid();
+    }
+
+    function entryHTML(e) {
+      if (!e) return '<span class="empty-slot">Empty</span>';
+      if (e.entry_type === 'subject') {
+        return `<span class="chip subject">${esc(e.subject_code)} - ${esc(e.subject_name)}
+                <small>${e.faculty_name ? esc(e.faculty_name) : 'No faculty assigned'}</small></span>`;
+      }
+      const label = e.custom_text || (e.entry_type === 'lunch' ? 'Lunch Break' : 'Break');
+      return `<span class="chip ${esc(e.entry_type)}">${esc(label)}</span>`;
+    }
+
+    function renderGrid() {
+      $('gridTitle').textContent = `${course.course_code} - Semester ${semester} Timetable`;
+      const btn = $('editToggle');
+      btn.textContent = editMode ? 'Edit Mode: ON (Editing Active)' : 'Edit Mode: OFF';
+      btn.classList.toggle('on', editMode);
+      $('addSlotRow').classList.toggle('show', editMode);
+      $('gridHint').textContent = tt.subjects.length
+        ? (editMode ? 'Edit the time directly in the first column (saves when you leave the box). Use "Assign/Edit" on a cell for a subject, break, lunch or plain text.' : '')
+        : 'No subjects exist for this semester yet. Add them in Manage Subjects - you can still add Break, Lunch or plain text slots.';
+
+      const map = {};
+      tt.entries.forEach(e => { map[e.slot_id + '|' + e.day_name] = e; });
+
+      $('gridBody').innerHTML = tt.slots.map(slot => {
+        const timeCell = editMode
+          ? `<td><input type="text" class="time-edit-input" value="${esc(slot.time_label)}" data-slot="${slot.id}" data-old="${esc(slot.time_label)}">
+               <button type="button" class="del-slot" data-slot="${slot.id}">Remove slot</button></td>`
+          : `<td><strong>${esc(slot.time_label)}</strong></td>`;
+        const cells = DAYS.map(day => {
+          const e = map[slot.id + '|' + day];
+          const editBtn = editMode ? `<button type="button" class="edit-slot-btn" data-slot="${slot.id}" data-day="${day}">Assign/Edit</button>` : '';
+          return `<td>${entryHTML(e)}${editBtn}</td>`;
+        }).join('');
+        return `<tr>${timeCell}${cells}</tr>`;
+      }).join('') || `<tr><td colspan="7" class="empty-slot">No time slots. Turn on Edit Mode to add one.</td></tr>`;
+    }
+
+    /* ---------- Time slot editing ---------- */
+    async function renameSlot(input) {
+      const label = input.value.trim();
+      if (!label || label === input.dataset.old) { input.value = input.dataset.old; return; }
+      const r = await api(`/api/timetable/slots/${input.dataset.slot}`, jsonOpts('PUT', { time_label: label }));
+      if (!r.success) alert(r.message || 'Could not update time.');
+      await loadGrid();
+    }
+
+    async function addSlot() {
+      const label = $('newSlotLabel').value.trim();
+      if (!label) { alert('Enter the time slot first.'); return; }
+      const r = await api('/api/timetable/slots', jsonOpts('POST',
+        { course_code: course.course_code, semester, time_label: label }));
+      if (!r.success) { alert(r.message || 'Could not add slot.'); return; }
+      $('newSlotLabel').value = '';
+      await loadGrid();
+    }
+
+    async function deleteSlot(id) {
+      if (!confirm('Remove this time slot and everything scheduled in it?')) return;
+      const r = await api(`/api/timetable/slots/${id}`, { method: 'DELETE' });
+      if (!r.success) alert(r.message || 'Could not remove slot.');
+      await loadGrid();
+    }
+
+    /* ---------- Cell modal ---------- */
+    function syncModalFields() {
+      const t = $('entryType').value;
+      $('subjectGroup').style.display = t === 'subject' ? 'flex' : 'none';
+      $('textGroup').style.display = (t === 'custom' || t === 'break' || t === 'lunch') ? 'flex' : 'none';
+      $('allDaysGroup').style.display = t === 'subject' ? 'none' : 'flex';
+      $('customText').placeholder = t === 'custom' ? 'e.g. Seminar, Guest Lecture, Sports'
+        : t === 'lunch' ? 'Optional (default: Lunch Break)' : 'Optional (default: Break)';
+    }
+
+    function openCell(slotId, day) {
+      const slot = tt.slots.find(s => s.id === slotId);
+      const e = tt.entries.find(x => x.slot_id === slotId && x.day_name === day);
+      cell = { slotId, day };
+      $('cellInfo').value = `${day} | ${slot.time_label}`;
+
+      $('subjectSelect').innerHTML = tt.subjects.map(s =>
+        `<option value="${s.id}">${esc(s.subject_code)} - ${esc(s.subject_name)} (${esc(s.subject_type)}) ${s.faculty_name ? '| ' + esc(s.faculty_name) : '| no faculty'}</option>`
+      ).join('');
+
+      const typeSel = $('entryType');
+      typeSel.querySelector('option[value="subject"]').disabled = !tt.subjects.length;
+      typeSel.value = e ? e.entry_type : (tt.subjects.length ? 'subject' : 'custom');
+      if (e && e.entry_type === 'subject') $('subjectSelect').value = String(e.subject_id);
+      $('customText').value = e && e.entry_type !== 'subject' ? e.custom_text : '';
+      $('allDays').checked = false;
+      syncModalFields();
+      $('cellModal').classList.add('active');
+    }
+
+    function closeCell() { $('cellModal').classList.remove('active'); cell = null; }
+
+    async function saveCell() {
+      if (!cell) return;
+      const t = $('entryType').value;
+      const btn = $('saveCell');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        const r = await api('/api/timetable/entry', jsonOpts('PUT', {
+          slot_id: cell.slotId,
+          day: cell.day,
+          entry_type: t,
+          subject_id: t === 'subject' ? Number($('subjectSelect').value) : null,
+          custom_text: $('customText').value.trim(),
+          apply_all_days: $('allDays').checked
+        }));
+        if (!r.success) { alert(r.message || 'Could not save.'); return; }
+        closeCell();
+        await loadGrid();
+      } catch (err) {
+        alert(err.message || 'Server communication error.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Save';
+      }
+    }
+
+    /* ---------- Events ---------- */
+    $('coursesGrid').addEventListener('click', e => {
+      const c = e.target.closest('[data-course]'); if (c) selectCourse(c.dataset.course);
+    });
+    $('semestersGrid').addEventListener('click', e => {
+      const c = e.target.closest('[data-sem]'); if (c) selectSemester(Number(c.dataset.sem));
+    });
+    $('backToCourses').addEventListener('click', () => showView('coursesView'));
+    $('backToSems').addEventListener('click', () => showView('semestersView'));
+    $('editToggle').addEventListener('click', () => { editMode = !editMode; renderGrid(); });
+    $('addSlotBtn').addEventListener('click', addSlot);
+    $('gridBody').addEventListener('change', e => {
+      if (e.target.matches('.time-edit-input')) renameSlot(e.target);
+    });
+    $('gridBody').addEventListener('click', e => {
+      const edit = e.target.closest('.edit-slot-btn');
+      if (edit) return openCell(Number(edit.dataset.slot), edit.dataset.day);
+      const del = e.target.closest('.del-slot');
+      if (del) deleteSlot(Number(del.dataset.slot));
+    });
+    $('entryType').addEventListener('change', syncModalFields);
+    $('saveCell').addEventListener('click', saveCell);
+    $('closeModal').addEventListener('click', closeCell);
+    $('cancelModal').addEventListener('click', closeCell);
+
+    loadCourses();
+  </script>
+</body>
+</html>

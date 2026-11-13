@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Timetable | Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #FFFFFF; color: #000000; display: flex; min-height: 100vh; }
+    #sidebar-container { display: contents; }
+
+    aside { width: 260px; background: #FFFFFF; border-right: 2px solid #0047AB; display: flex;
+            flex-direction: column; justify-content: space-between; padding: 24px; flex-shrink: 0; }
+    .sidebar-brand h2 { font-size: 1.4rem; color: #0047AB; margin-bottom: 6px; }
+    .sidebar-brand p { font-size: 0.85rem; color: #555555; }
+    .sidebar-menu { list-style: none; margin-top: 30px; flex-grow: 1; }
+    .sidebar-menu li { margin-bottom: 12px; }
+    .sidebar-menu a { display: block; padding: 10px 14px; color: #000000; text-decoration: none; font-weight: 500;
+                      border-radius: 8px; transition: background 0.2s, color 0.2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: #0047AB; color: #FFFFFF; }
+    .logout-btn { display: block; padding: 10px 14px; background: #FFFFFF; color: #0047AB; border: 1px solid #0047AB;
+                  text-align: center; text-decoration: none; font-weight: 600; border-radius: 8px; transition: all 0.2s; }
+    .logout-btn:hover { background: #0047AB; color: #FFFFFF; }
+
+    main { flex-grow: 1; padding: 30px 40px; background: #FFFFFF; overflow-y: auto; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+             margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+    header h1 { font-size: 1.8rem; color: #000000; }
+    .student-profile-badge { font-size: 0.9rem; color: #555555; font-weight: 600; }
+
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .toolbar label { font-weight: 600; font-size: 0.9rem; }
+    .toolbar select { padding: 9px 12px; border: 1px solid #0047AB; border-radius: 8px; font-size: 0.9rem;
+                      background: #FFFFFF; color: #000000; }
+
+    .section-title { font-size: 1.3rem; color: #000000; margin-bottom: 15px; font-weight: 600; }
+    .table-wrap { overflow-x: auto; margin-bottom: 30px; border: 1px solid #e0e0e0; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; background: #FFFFFF; }
+    th, td { padding: 12px 16px; text-align: left; font-size: 0.9rem; border-bottom: 1px solid #e0e0e0; }
+    th { background: #0047AB; color: #FFFFFF; font-weight: 600; white-space: nowrap; }
+
+    .empty { text-align: center; color: #666666; padding: 24px; }
+    .error-box { display: none; background: #fee2e2; color: #991b1b; border: 1px solid #f87171;
+                 padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
+
+    /* Timetable grid */
+    .tt th, .tt td { text-align: center; vertical-align: middle; min-width: 130px; }
+    .tt td.time { background: #f0f4f8; font-weight: 600; white-space: nowrap; min-width: 150px; }
+    .tt th.today { background: #002f73; }
+    .tt td.today { background: #eef4ff; }
+    .tt .sub-code { font-weight: 700; color: #0047AB; }
+    .tt .sub-name { font-size: 0.82rem; }
+    .tt .sub-fac { font-size: 0.75rem; color: #555555; margin-top: 2px; }
+    .tt .sub-type { font-size: 0.7rem; color: #0047AB; font-weight: 600; }
+    .tt td.break { background: #fef3c7; color: #92400e; font-weight: 600; }
+    .tt td.lunch { background: #d1fae5; color: #065f46; font-weight: 600; }
+    .tt td.custom { background: #ede9fe; color: #5b21b6; font-weight: 600; }
+    .tt .blank { color: #aaaaaa; }
+
+    @media (max-width: 800px) {
+      body { flex-direction: column; }
+      aside { width: 100%; border-right: none; border-bottom: 2px solid #0047AB; }
+      main { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+
+  <main>
+    <header>
+      <h1>My Class Timetable</h1>
+      <div class="student-profile-badge"><span data-user="id"></span> | <span data-user="title"></span></div>
+    </header>
+
+    <div id="errorBox" class="error-box"></div>
+
+    <div class="toolbar">
+      <label for="semSelect">Semester:</label>
+      <select id="semSelect"></select>
+    </div>
+
+    <div class="section-title">Weekly Lecture &amp; Lab Schedule</div>
+    <div class="table-wrap">
+      <table class="tt">
+        <thead id="ttHead"></thead>
+        <tbody id="ttBody"><tr><td class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    /* ---------- Shared helpers ---------- */
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    async function api(url) {
+      var res = await fetch(url, { credentials: 'same-origin' });
+      if (res.status === 401) {
+        window.location.href = '/auth/login.html';
+        throw new Error('Please log in again.');
+      }
+      var data;
+      try { data = await res.json(); } catch (e) { throw new Error('Unexpected server response.'); }
+      if (!data.success) throw new Error(data.message || 'Request failed.');
+      return data;
+    }
+
+    function showError(msg) {
+      var box = document.getElementById('errorBox');
+      if (!box) return;
+      box.textContent = msg || '';
+      box.style.display = msg ? 'block' : 'none';
+    }
+
+    function fillSemesters(select, current, selected) {
+      select.innerHTML = '';
+      for (var i = 1; i <= current; i++) {
+        select.appendChild(new Option('Semester ' + i + (i === current ? ' (Current)' : ''), i));
+      }
+      select.value = String(selected);
+    }
+
+    async function initStudentPage() {
+      var page = window.location.pathname.split('/').pop() || 'view.html';
+      try {
+        var res = await fetch('/components/student-sidebar.html', { credentials: 'same-origin' });
+        document.getElementById('sidebar-container').innerHTML = await res.text();
+        document.querySelectorAll('.sidebar-menu a').forEach(function (a) {
+          a.classList.toggle('active', a.getAttribute('data-page') === page);
+        });
+      } catch (e) { console.error('Sidebar load failed', e); }
+
+      try {
+        var r = await fetch('/api/current-user', { credentials: 'same-origin' });
+        if (r.status === 401) { window.location.href = '/auth/login.html'; return; }
+        var u = await r.json();
+        var map = { name: u.name, id: u.id_number, title: u.title, sub: u.title };
+        document.querySelectorAll('[data-user]').forEach(function (el) {
+          var k = el.getAttribute('data-user');
+          if (map[k] !== undefined) el.textContent = map[k];
+        });
+      } catch (e) { console.error('User load failed', e); }
+    }
+
+    /* ---------- Page logic ---------- */
+    var selectedSem = null;
+    var semSelect = null;
+
+    function cellHtml(e) {
+      if (!e) return '<span class="blank">—</span>';
+      if (e.entry_type === 'subject') {
+        return '<div class="sub-code">' + esc(e.subject_code) + '</div>' +
+               '<div class="sub-name">' + esc(e.subject_name) + '</div>' +
+               '<div class="sub-type">' + esc(e.subject_type) + '</div>' +
+               '<div class="sub-fac">' + esc(e.faculty_name || '') + '</div>';
+      }
+      return esc(e.custom_text || (e.entry_type === 'lunch' ? 'Lunch Break' : 'Break'));
+    }
+
+    async function loadTimetable() {
+      showError('');
+      try {
+        var d = await api('/api/student/timetable' + (selectedSem ? '?semester=' + selectedSem : ''));
+        if (!semSelect.options.length) {
+          fillSemesters(semSelect, d.current_semester, d.semester);
+        }
+        selectedSem = d.semester;
+
+        var head = document.getElementById('ttHead');
+        var body = document.getElementById('ttBody');
+
+        if (!d.slots.length) {
+          head.innerHTML = '';
+          body.innerHTML = '<tr><td class="empty">The timetable for this semester has not been published yet.</td></tr>';
+          return;
+        }
+
+        var isCurrent = String(d.semester) === String(d.current_semester);
+        head.innerHTML = '<tr><th>Time</th>' + d.days.map(function (day) {
+          return '<th class="' + (isCurrent && day === d.today ? 'today' : '') + '">' + esc(day) + '</th>';
+        }).join('') + '</tr>';
+
+        var map = {};
+        d.entries.forEach(function (e) { map[e.slot_id + '|' + e.day_name] = e; });
+
+        body.innerHTML = d.slots.map(function (s) {
+          var cells = d.days.map(function (day) {
+            var e = map[s.id + '|' + day];
+            var cls = [];
+            if (isCurrent && day === d.today) cls.push('today');
+            if (e && e.entry_type !== 'subject') cls.push(e.entry_type);
+            return '<td class="' + cls.join(' ') + '">' + cellHtml(e) + '</td>';
+          }).join('');
+          return '<tr><td class="time">' + esc(s.time_label) + '</td>' + cells + '</tr>';
+        }).join('');
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      initStudentPage();
+      semSelect = document.getElementById('semSelect');
+      semSelect.addEventListener('change', function () {
+        selectedSem = semSelect.value;
+        loadTimetable();
+      });
+      loadTimetable();
+    });
+  </script>
+</body>
+</html>

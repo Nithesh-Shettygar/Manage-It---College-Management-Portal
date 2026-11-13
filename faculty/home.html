@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Dashboard | Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #FFF; color: #000; display: flex; min-height: 100vh; }
+    #sidebar-container { display: contents; }
+    aside { width: 260px; background: #FFF; border-right: 2px solid #0047AB; display: flex; flex-direction: column; justify-content: space-between; padding: 24px; flex-shrink: 0; }
+    .sidebar-brand h2 { font-size: 1.4rem; color: #0047AB; margin-bottom: 6px; }
+    .sidebar-brand p { font-size: .85rem; color: #555; }
+    .sidebar-menu { list-style: none; margin-top: 30px; flex-grow: 1; }
+    .sidebar-menu li { margin-bottom: 12px; }
+    .sidebar-menu a { display: block; padding: 10px 14px; color: #000; text-decoration: none; font-weight: 500; border-radius: 8px; transition: background .2s, color .2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: #0047AB; color: #FFF; }
+    .logout-btn { display: block; padding: 10px 14px; background: #FFF; color: #0047AB; border: 1px solid #0047AB; text-align: center; text-decoration: none; font-weight: 600; border-radius: 8px; transition: all .2s; }
+    .logout-btn:hover { background: #0047AB; color: #FFF; }
+    main { flex-grow: 1; padding: 30px 40px; overflow-y: auto; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+    header h1 { font-size: 1.8rem; }
+    .faculty-profile-badge { font-size: .9rem; color: #555; font-weight: 600; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .card { border: 2px solid #0047AB; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,71,171,.08); }
+    .card h3 { font-size: 1.1rem; color: #0047AB; margin-bottom: 10px; }
+    .card p { color: #444; font-size: .95rem; line-height: 1.4; }
+    .highlight-stat { font-size: 1.8rem; font-weight: bold; margin-top: 8px; }
+    .section-title { font-size: 1.3rem; margin-bottom: 15px; font-weight: 600; }
+    .table-wrap { overflow-x: auto; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0; }
+    th, td { padding: 12px 16px; text-align: left; font-size: .9rem; border-bottom: 1px solid #e0e0e0; }
+    th { background: #0047AB; color: #FFF; font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .att-link { color: #0047AB; font-weight: 600; text-decoration: none; font-size: .82rem; }
+    .att-link:hover { text-decoration: underline; }
+    .empty { text-align: center; color: #666; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <main>
+    <header>
+      <h1>Welcome, <span data-user="name"></span></h1>
+      <div class="faculty-profile-badge">ID: <span data-user="id"></span> | <span data-user="title"></span></div>
+    </header>
+
+    <div class="dashboard-grid">
+      <div class="card"><h3>Assigned Subjects</h3><p>Subjects allotted to you</p><div class="highlight-stat" id="sSubjects">-</div></div>
+      <div class="card"><h3>Total Students</h3><p>Across your subjects' classes</p><div class="highlight-stat" id="sStudents">-</div></div>
+      <div class="card"><h3>Classes Today</h3><p id="todayLabel">Scheduled for today</p><div class="highlight-stat" id="sToday">-</div></div>
+    </div>
+
+    <div class="section-title">Today's Class Schedule</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Time</th><th>Subject</th><th>Course / Semester</th><th>Attendance</th></tr></thead>
+        <tbody id="todayBody"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="section-title">My Subjects</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Code</th><th>Subject</th><th>Course / Semester</th><th>Type</th><th>Students</th></tr></thead>
+        <tbody id="subjectBody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/components/portal.js"></script>
+  <script>
+    initPortal({ sidebar: '/components/sidebar.html', role: 'faculty', defaultPage: 'home.html' });
+
+    const $ = id => document.getElementById(id);
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    (async () => {
+      try {
+        const [sRes, tRes] = await Promise.all([fetch('/api/my/subjects'), fetch('/api/my/timetable')]);
+        if (sRes.status === 401 || tRes.status === 401) { window.location.href = '/auth/login.html'; return; }
+        const s = await sRes.json(), t = await tRes.json();
+        const subs = s.success ? s.subjects : [];
+        const today = t.success ? t.timetable.filter(r => r.day_name === t.today) : [];
+
+        $('sSubjects').textContent = subs.length;
+        $('sStudents').textContent = subs.reduce((a, x) => a + Number(x.student_count || 0), 0);
+        $('sToday').textContent = today.length;
+        if (t.today) $('todayLabel').textContent = t.today + "'s classes";
+
+        $('todayBody').innerHTML = today.length ? today.map(r => `
+          <tr><td>${esc(r.time_label)}</td>
+          <td>${esc(r.subject_code)} - ${esc(r.subject_name)}</td>
+          <td>${esc(r.course_code)} / Sem ${esc(r.semester)}</td>
+          <td><a class="att-link" href="attendance.html?subject=${r.subject_id}">Take Attendance</a></td></tr>`).join('')
+          : '<tr><td colspan="4" class="empty">No classes scheduled for you today.</td></tr>';
+
+        $('subjectBody').innerHTML = subs.length ? subs.map(x => `
+          <tr><td><code>${esc(x.subject_code)}</code></td><td><strong>${esc(x.subject_name)}</strong></td>
+          <td>${esc(x.course_code)} / Sem ${esc(x.semester)}</td><td>${esc(x.subject_type)}</td><td>${esc(x.student_count)}</td></tr>`).join('')
+          : '<tr><td colspan="5" class="empty">No subjects assigned yet. Please contact the admin.</td></tr>';
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  </script>
+</body>
+</html>

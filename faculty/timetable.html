@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Timetable | Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #FFF; color: #000; display: flex; min-height: 100vh; }
+    #sidebar-container { display: contents; }
+    aside { width: 260px; background: #FFF; border-right: 2px solid #0047AB; display: flex; flex-direction: column; justify-content: space-between; padding: 24px; flex-shrink: 0; }
+    .sidebar-brand h2 { font-size: 1.4rem; color: #0047AB; margin-bottom: 6px; }
+    .sidebar-brand p { font-size: .85rem; color: #555; }
+    .sidebar-menu { list-style: none; margin-top: 30px; flex-grow: 1; }
+    .sidebar-menu li { margin-bottom: 12px; }
+    .sidebar-menu a { display: block; padding: 10px 14px; color: #000; text-decoration: none; font-weight: 500; border-radius: 8px; transition: background .2s, color .2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: #0047AB; color: #FFF; }
+    .logout-btn { display: block; padding: 10px 14px; background: #FFF; color: #0047AB; border: 1px solid #0047AB; text-align: center; text-decoration: none; font-weight: 600; border-radius: 8px; transition: all .2s; }
+    .logout-btn:hover { background: #0047AB; color: #FFF; }
+    main { flex-grow: 1; padding: 30px 40px; overflow-y: auto; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+    header h1 { font-size: 1.8rem; }
+    .faculty-profile-badge { font-size: .9rem; color: #555; font-weight: 600; }
+    .section-title { font-size: 1.3rem; margin-bottom: 15px; font-weight: 600; }
+    .table-wrap { overflow-x: auto; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0; }
+    th, td { padding: 14px 16px; text-align: left; font-size: .9rem; border-bottom: 1px solid #e0e0e0; }
+    th { background: #0047AB; color: #FFF; font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    tr.today { background: #ecfdf5; }
+    .today-tag { display: inline-block; margin-left: 6px; padding: 2px 8px; background: #10b981; color: #FFF; border-radius: 10px; font-size: .7rem; font-weight: 700; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: .75rem; }
+    .theory { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+    .practical { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+    .att-link { color: #0047AB; font-weight: 600; text-decoration: none; font-size: .82rem; }
+    .att-link:hover { text-decoration: underline; }
+    .empty { text-align: center; color: #666; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <main>
+    <header>
+      <h1>Weekly Teaching Timetable</h1>
+      <div class="faculty-profile-badge">ID: <span data-user="id"></span> | <span data-user="title"></span></div>
+    </header>
+
+    <div class="section-title">My Schedule</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Day</th><th>Time Slot</th><th>Subject</th><th>Course / Semester</th><th>Type</th><th>Attendance</th></tr></thead>
+        <tbody id="body"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/components/portal.js"></script>
+  <script>
+    initPortal({ sidebar: '/components/sidebar.html', role: 'faculty', defaultPage: 'timetable.html' });
+
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    (async () => {
+      const body = document.getElementById('body');
+      try {
+        const res = await fetch('/api/my/timetable');
+        if (res.status === 401) { window.location.href = '/auth/login.html'; return; }
+        const d = await res.json();
+        if (!d.success) { body.innerHTML = `<tr><td colspan="6" class="empty">${esc(d.message || 'Failed to load.')}</td></tr>`; return; }
+        body.innerHTML = d.timetable.length ? d.timetable.map(r => `
+          <tr class="${r.day_name === d.today ? 'today' : ''}">
+            <td><strong>${esc(r.day_name)}</strong>${r.day_name === d.today ? '<span class="today-tag">TODAY</span>' : ''}</td>
+            <td>${esc(r.time_label)}</td>
+            <td>${esc(r.subject_code)} - ${esc(r.subject_name)}</td>
+            <td>${esc(r.course_code)} / Sem ${esc(r.semester)}</td>
+            <td><span class="badge ${r.subject_type === 'Theory' ? 'theory' : 'practical'}">${esc(r.subject_type)}</span></td>
+            <td><a class="att-link" href="attendance.html?subject=${r.subject_id}">Take Attendance</a></td>
+          </tr>`).join('')
+          : '<tr><td colspan="6" class="empty">Nothing scheduled yet. The admin must assign you a subject and place it in the Master Timetable.</td></tr>';
+      } catch (err) {
+        body.innerHTML = '<tr><td colspan="6" class="empty">Could not load timetable.</td></tr>';
+      }
+    })();
+  </script>
+</body>
+</html>

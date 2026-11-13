@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Attendance | Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #FFF; color: #000; display: flex; min-height: 100vh; }
+    #sidebar-container { display: contents; }
+    aside { width: 260px; background: #FFF; border-right: 2px solid #0047AB; display: flex; flex-direction: column; justify-content: space-between; padding: 24px; flex-shrink: 0; }
+    .sidebar-brand h2 { font-size: 1.4rem; color: #0047AB; margin-bottom: 6px; }
+    .sidebar-brand p { font-size: .85rem; color: #555; }
+    .sidebar-menu { list-style: none; margin-top: 30px; flex-grow: 1; }
+    .sidebar-menu li { margin-bottom: 12px; }
+    .sidebar-menu a { display: block; padding: 10px 14px; color: #000; text-decoration: none; font-weight: 500; border-radius: 8px; transition: background .2s, color .2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: #0047AB; color: #FFF; }
+    .logout-btn { display: block; padding: 10px 14px; background: #FFF; color: #0047AB; border: 1px solid #0047AB; text-align: center; text-decoration: none; font-weight: 600; border-radius: 8px; transition: all .2s; }
+    .logout-btn:hover { background: #0047AB; color: #FFF; }
+    main { flex-grow: 1; padding: 30px 40px; overflow-y: auto; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+    header h1 { font-size: 1.8rem; }
+    .faculty-profile-badge { font-size: .9rem; color: #555; font-weight: 600; }
+    .today-box { border: 2px solid #0047AB; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; }
+    .today-box h3 { font-size: 1rem; color: #0047AB; margin-bottom: 10px; }
+    .today-list { display: flex; gap: 10px; flex-wrap: wrap; }
+    .today-chip { padding: 8px 12px; background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; text-align: left; }
+    .today-chip:hover { background: #dbeafe; }
+    .today-chip.open { background: #d1fae5; border-color: #34d399; color: #065f46; }
+    .today-chip.closed { opacity: .6; }
+    .muted { color: #64748b; font-size: .85rem; }
+    .filter-card { border: 2px solid #0047AB; border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+    .filter-group { flex: 1; min-width: 200px; }
+    .filter-group label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+    .filter-group select, .filter-group input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: .9rem; outline: none; background: #FFF; }
+    .filter-group select:focus, .filter-group input:focus { border-color: #0047AB; }
+    .btn-primary { padding: 10px 24px; background: #0047AB; color: #FFF; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; height: 42px; }
+    .btn-primary:hover { background: #003380; }
+    .btn-primary:disabled { background: #7a9ad0; cursor: not-allowed; }
+    .btn-green { padding: 10px 20px; background: #10b981; color: #FFF; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; height: 42px; }
+    .btn-green:hover { background: #059669; }
+    .btn-light { padding: 8px 14px; background: #e2e8f0; color: #1e293b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: .82rem; }
+    .btn-light:hover { background: #cbd5e1; }
+    .btn-light:disabled { opacity: .5; cursor: not-allowed; }
+    .section-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+    .section-title { font-size: 1.3rem; font-weight: 600; }
+    .bulk { display: flex; gap: 8px; align-items: center; font-size: .85rem; font-weight: 600; }
+    .banner { display: none; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: .85rem; }
+    .banner.info { background: #dcfce7; color: #166534; border-color: #86efac; }
+    .table-wrap { overflow-x: auto; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0; }
+    th, td { padding: 12px 16px; text-align: left; font-size: .9rem; }
+    th { background: #0047AB; color: #FFF; font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .empty { text-align: center; color: #666; font-style: italic; }
+    .attendance-options { display: flex; gap: 12px; align-items: center; }
+    .att-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: .85rem; cursor: pointer; user-select: none; transition: all .2s; background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
+    .att-btn.locked { cursor: not-allowed; opacity: .65; }
+    .checkbox-icon { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #9ca3af; display: flex; align-items: center; justify-content: center; background: #fff; transition: all .2s; }
+    .checkbox-icon::after { content: '\2713'; font-size: 12px; font-weight: bold; color: transparent; }
+    .att-btn.present-btn.selected { background: #d1fae5; color: #065f46; border-color: #34d399; }
+    .att-btn.present-btn.selected .checkbox-icon { border-color: #10b981; background: #10b981; }
+    .att-btn.absent-btn.selected { background: #fee2e2; color: #991b1b; border-color: #f87171; }
+    .att-btn.absent-btn.selected .checkbox-icon { border-color: #ef4444; background: #ef4444; }
+    .att-btn.selected .checkbox-icon::after { color: #fff; }
+    .footer-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .counts { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <main>
+    <header>
+      <h1>Student Attendance Manager</h1>
+      <div class="faculty-profile-badge">ID: <span data-user="id"></span> | <span data-user="title"></span></div>
+    </header>
+
+    <div class="today-box">
+      <h3>Today's Classes <span class="muted" id="todayName"></span></h3>
+      <div class="today-list" id="todayList"><span class="muted">Loading...</span></div>
+    </div>
+
+    <div class="filter-card">
+      <div class="filter-group">
+        <label for="subjectSelect">Subject (assigned to you)</label>
+        <select id="subjectSelect"></select>
+      </div>
+      <div class="filter-group">
+        <label for="dateSelect">Attendance Date</label>
+        <input type="date" id="dateSelect">
+      </div>
+      <button type="button" class="btn-primary" id="loadBtn">Load Roster</button>
+      <button type="button" class="btn-green" id="exportBtn">Export CSV</button>
+    </div>
+
+    <div class="section-row">
+      <div class="section-title" id="rosterTitle">Class Roster &amp; Attendance Sheet</div>
+      <div class="bulk">Mark all:
+        <button type="button" class="btn-light" id="allPresent">Present</button>
+        <button type="button" class="btn-light" id="allAbsent">Absent</button>
+      </div>
+    </div>
+    <div class="banner" id="lockBanner"></div>
+    <div class="banner" id="savedBanner">Attendance was already saved for this date. Saving again will update it (only while the class is running).</div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Roll No</th><th>Student Name</th><th>Attendance Status</th></tr></thead>
+        <tbody id="rosterBody"><tr><td colspan="3" class="empty">Select a subject and click Load Roster.</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="footer-bar">
+      <div class="counts" id="counts"></div>
+      <button type="button" class="btn-primary" id="saveBtn" disabled>Save &amp; Submit Attendance</button>
+    </div>
+  </main>
+
+  <script src="/components/portal.js"></script>
+  <script>
+    initPortal({ sidebar: '/components/sidebar.html', role: 'faculty', defaultPage: 'attendance.html' });
+
+    const $ = id => document.getElementById(id);
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const todayStr = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+    let subjects = [], roster = [], editable = false;
+    // students already seen as Present on the server (so face-marked ones are applied only once)
+    let faceSeen = new Set();
+
+    async function api(url, options) {
+      const res = await fetch(url, options);
+      if (res.status === 401) { window.location.href = '/auth/login.html'; throw new Error('Session expired'); }
+      try { return await res.json(); }
+      catch { throw new Error('Unexpected server response (' + res.status + ')'); }
+    }
+
+    async function init() {
+      $('dateSelect').value = todayStr;
+      $('dateSelect').max = todayStr;       // attendance can't be marked for a future date
+
+      const [s, t] = await Promise.all([api('/api/my/subjects'), api('/api/my/timetable')]);
+      subjects = s.success ? s.subjects : [];
+      $('subjectSelect').innerHTML = subjects.length
+        ? subjects.map(x => `<option value="${x.id}">${esc(x.subject_code)} - ${esc(x.subject_name)} (${esc(x.course_code)} Sem ${esc(x.semester)})</option>`).join('')
+        : '<option value="">No subjects assigned to you yet</option>';
+
+      renderToday(t.success ? t : { today: '', timetable: [] });
+
+      const wanted = new URLSearchParams(location.search).get('subject');
+      if (wanted && subjects.some(x => String(x.id) === wanted)) {
+        $('subjectSelect').value = wanted;
+        loadRoster();
+      }
+    }
+
+    function renderToday(t) {
+      $('todayName').textContent = t.today ? '(' + t.today + ')' : '';
+      const rows = t.timetable.filter(r => r.day_name === t.today);
+      $('todayList').innerHTML = rows.length ? rows.map(r => `
+        <button type="button" class="today-chip ${r.is_open ? 'open' : 'closed'}" data-subject="${r.subject_id}">
+          ${esc(r.time_label)} ${r.is_open ? '(Open now)' : ''}<br>${esc(r.subject_code)} - ${esc(r.subject_name)}<br>
+          <span class="muted">${esc(r.course_code)} Sem ${esc(r.semester)}</span>
+        </button>`).join('') : '<span class="muted">No classes scheduled for you today.</span>';
+    }
+
+    async function loadRoster() {
+      const sid = $('subjectSelect').value, date = $('dateSelect').value;
+      if (!sid) { alert('You have no assigned subject. Ask the admin to assign one.'); return; }
+      if (!date) { alert('Pick a date.'); return; }
+      const r = await api(`/api/my/roster?subject_id=${sid}&date=${date}`);
+      if (!r.success) { alert(r.message || 'Could not load roster.'); return; }
+
+      // DEFAULT IS ABSENT. Anyone already Present on the server (face camera or earlier save) stays Present.
+      roster = r.students.map(s => ({ ...s, status: s.status || 'Absent' }));
+      faceSeen = new Set(r.students.filter(s => s.status === 'Present').map(s => s.id));
+      editable = !!r.editable;
+
+      const lb = $('lockBanner');
+      lb.className = 'banner';
+      lb.style.display = 'block';
+      if (editable) {
+        lb.classList.add('info');
+        lb.textContent = 'Attendance is OPEN for the class ' + r.slot + '. Students detected by the face camera turn Present automatically.';
+      } else {
+        lb.textContent = r.reason || 'Attendance is locked.';
+      }
+
+      $('rosterTitle').textContent = `${r.subject.subject_code} - ${r.subject.subject_name} | ${r.subject.course_code} Semester ${r.subject.semester}`;
+      $('savedBanner').style.display = r.saved ? 'block' : 'none';
+      $('saveBtn').disabled = !roster.length || !editable;
+      $('allPresent').disabled = !editable;
+      $('allAbsent').disabled = !editable;
+      renderRoster();
+    }
+
+    function renderRoster() {
+      const lock = editable ? '' : 'locked';
+      $('rosterBody').innerHTML = roster.length ? roster.map(s => `
+        <tr>
+          <td><code>${esc(s.registration_no)}</code></td>
+          <td><strong>${esc(s.full_name)}</strong></td>
+          <td><div class="attendance-options">
+            <label class="att-btn present-btn ${s.status === 'Present' ? 'selected' : ''} ${lock}" data-id="${s.id}" data-st="Present"><span class="checkbox-icon"></span>Present</label>
+            <label class="att-btn absent-btn ${s.status === 'Absent' ? 'selected' : ''} ${lock}" data-id="${s.id}" data-st="Absent"><span class="checkbox-icon"></span>Absent</label>
+          </div></td>
+        </tr>`).join('')
+        : '<tr><td colspan="3" class="empty">No students are enrolled in this course and semester.</td></tr>';
+      const p = roster.filter(s => s.status === 'Present').length;
+      $('counts').textContent = roster.length ? `Present: ${p} | Absent: ${roster.length - p} | Total: ${roster.length}` : '';
+    }
+
+    // Pull in students the face camera has just marked Present (checked every 5 seconds)
+    async function refreshFace() {
+      if (!editable || !roster.length) return;
+      const sid = $('subjectSelect').value, date = $('dateSelect').value;
+      if (!sid || !date) return;
+      try {
+        const r = await api(`/api/my/roster?subject_id=${sid}&date=${date}`);
+        if (!r.success || !r.editable) return;
+        let changed = false;
+        r.students.forEach(s => {
+          if (s.status === 'Present' && !faceSeen.has(s.id)) {
+            faceSeen.add(s.id);
+            const mine = roster.find(x => x.id === s.id);
+            if (mine && mine.status !== 'Present') { mine.status = 'Present'; changed = true; }
+          }
+        });
+        if (changed) renderRoster();
+      } catch (e) { /* ignore, try again next time */ }
+    }
+
+    async function save() {
+      if (!editable) return;
+      const btn = $('saveBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        const r = await api('/api/my/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject_id: Number($('subjectSelect').value),
+            date: $('dateSelect').value,
+            records: roster.map(s => ({ student_id: s.id, status: s.status }))
+          })
+        });
+        alert(r.message || (r.success ? 'Saved.' : 'Could not save attendance.'));
+        if (r.success) $('savedBanner').style.display = 'block';
+        else await loadRoster();          // window may have closed - refresh the lock state
+      } catch (err) { alert(err.message); }
+      btn.textContent = 'Save & Submit Attendance';
+      btn.disabled = !roster.length || !editable;
+    }
+
+    function setAll(status) {
+      if (!editable) return;
+      roster.forEach(s => s.status = status);
+      renderRoster();
+    }
+
+    $('rosterBody').addEventListener('click', e => {
+      if (!editable) return;
+      const b = e.target.closest('.att-btn[data-id]');
+      if (!b) return;
+      const s = roster.find(x => x.id === Number(b.dataset.id));
+      if (s) { s.status = b.dataset.st; renderRoster(); }
+    });
+    $('todayList').addEventListener('click', e => {
+      const c = e.target.closest('[data-subject]');
+      if (c) { $('subjectSelect').value = c.dataset.subject; loadRoster(); }
+    });
+    $('loadBtn').addEventListener('click', loadRoster);
+    $('subjectSelect').addEventListener('change', () => {
+      roster = [];
+      faceSeen = new Set();
+      editable = false;
+      $('saveBtn').disabled = true;
+      $('savedBanner').style.display = 'none';
+      $('lockBanner').style.display = 'none';
+    });
+    $('dateSelect').addEventListener('change', () => {
+      editable = false;
+      $('saveBtn').disabled = true;
+    });
+    $('saveBtn').addEventListener('click', save);
+    $('allPresent').addEventListener('click', () => setAll('Present'));
+    $('allAbsent').addEventListener('click', () => setAll('Absent'));
+    $('exportBtn').addEventListener('click', () => {
+      const sid = $('subjectSelect').value;
+      if (!sid) { alert('Select a subject first.'); return; }
+      window.location.href = '/api/my/attendance/export?subject_id=' + encodeURIComponent(sid);
+    });
+
+    // Keep the "Open now" chips fresh as classes start and end
+    setInterval(async () => {
+      try { const t = await api('/api/my/timetable'); if (t.success) renderToday(t); } catch (e) {}
+    }, 60000);
+
+    // Live-update the roster with face-camera attendance
+    setInterval(refreshFace, 5000);
+
+    init();
+  </script>
+</body>
+</html>

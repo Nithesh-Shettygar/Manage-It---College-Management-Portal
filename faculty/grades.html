@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grades & Marks | Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #FFF; color: #000; display: flex; min-height: 100vh; }
+    #sidebar-container { display: contents; }
+    aside { width: 260px; background: #FFF; border-right: 2px solid #0047AB; display: flex; flex-direction: column; justify-content: space-between; padding: 24px; flex-shrink: 0; }
+    .sidebar-brand h2 { font-size: 1.4rem; color: #0047AB; margin-bottom: 6px; }
+    .sidebar-brand p { font-size: .85rem; color: #555; }
+    .sidebar-menu { list-style: none; margin-top: 30px; flex-grow: 1; }
+    .sidebar-menu li { margin-bottom: 12px; }
+    .sidebar-menu a { display: block; padding: 10px 14px; color: #000; text-decoration: none; font-weight: 500; border-radius: 8px; transition: background .2s, color .2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: #0047AB; color: #FFF; }
+    .logout-btn { display: block; padding: 10px 14px; background: #FFF; color: #0047AB; border: 1px solid #0047AB; text-align: center; text-decoration: none; font-weight: 600; border-radius: 8px; transition: all .2s; }
+    .logout-btn:hover { background: #0047AB; color: #FFF; }
+    main { flex-grow: 1; padding: 30px 40px; overflow-y: auto; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+    header h1 { font-size: 1.8rem; }
+    .faculty-profile-badge { font-size: .9rem; color: #555; font-weight: 600; }
+    .filter-card { border: 2px solid #0047AB; border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; }
+    .filter-group { flex: 1; min-width: 190px; }
+    .filter-group label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+    select, input[type=text], input[type=number] { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: .9rem; outline: none; background: #FFF; }
+    select:focus, input:focus { border-color: #0047AB; }
+    .ctx { font-weight: 600; color: #0047AB; margin-bottom: 14px; min-height: 22px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { padding: 9px 18px; border: 1px solid #0047AB; background: #FFF; color: #0047AB; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .tab.active { background: #0047AB; color: #FFF; }
+    .pane { display: none; }
+    .pane.active { display: block; }
+    .placeholder { border: 1px dashed #94a3b8; background: #f8fafc; border-radius: 10px; padding: 30px; text-align: center; color: #475569; }
+    .split { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+    .panel { border: 2px solid #0047AB; border-radius: 12px; padding: 16px; }
+    .panel h3 { font-size: 1.05rem; color: #0047AB; margin-bottom: 12px; }
+    .stu-list { max-height: 520px; overflow-y: auto; margin-top: 12px; }
+    .stu { padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .stu:hover { background: #f1f5f9; }
+    .stu.active { background: #0047AB; color: #FFF; border-color: #0047AB; }
+    .stu b { font-size: .9rem; display: block; }
+    .stu small { font-size: .75rem; opacity: .8; }
+    .stu .tot { font-size: .78rem; font-weight: 700; white-space: nowrap; }
+    .table-wrap { overflow-x: auto; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0; }
+    th, td { padding: 11px 14px; text-align: left; font-size: .87rem; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
+    th { background: #0047AB; color: #FFF; font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .mark-in { width: 100px !important; padding: 7px 9px !important; }
+    .mark-in.over { border-color: #ef4444; background: #fee2e2; }
+    .max { color: #64748b; margin-left: 6px; font-size: .82rem; }
+    .totals { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
+    .tbox { border: 2px solid #0047AB; border-radius: 10px; padding: 10px 16px; min-width: 130px; }
+    .tbox span { font-size: .75rem; color: #555; font-weight: 600; }
+    .tbox b { display: block; font-size: 1.3rem; }
+    .btn-primary { padding: 10px 20px; background: #0047AB; color: #FFF; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #003380; }
+    .btn-primary:disabled { background: #7a9ad0; cursor: not-allowed; }
+    .btn-green { padding: 10px 20px; background: #10b981; color: #FFF; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-light { padding: 10px 18px; background: #e2e8f0; color: #1e293b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .ok-msg { color: #065f46; font-weight: 600; font-size: .85rem; }
+    .edit-btn { padding: 5px 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; border-radius: 6px; font-size: .78rem; font-weight: 600; cursor: pointer; }
+    .delete-btn { padding: 5px 10px; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; font-size: .78rem; font-weight: 600; cursor: pointer; }
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 6px; font-weight: 600; font-size: .73rem; background: #e0e7ff; color: #3730a3; }
+    .add-form { display: grid; grid-template-columns: 1.2fr 2fr 1fr auto; gap: 12px; align-items: end; margin-bottom: 18px; }
+    @media (max-width: 900px) { .add-form { grid-template-columns: 1fr; } }
+    .add-form label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+    .pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: .78rem; }
+    .g-good { background: #d1fae5; color: #065f46; } .g-mid { background: #fef3c7; color: #92400e; } .g-bad { background: #fee2e2; color: #991b1b; } .g-none { background: #e2e8f0; color: #475569; }
+    .empty { text-align: center; color: #666; font-style: italic; }
+    .hint { font-size: .8rem; color: #64748b; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <main>
+    <header>
+      <h1>Grades &amp; Marks</h1>
+      <div class="faculty-profile-badge">ID: <span data-user="id"></span> | <span data-user="title"></span></div>
+    </header>
+
+    <div class="filter-card">
+      <div class="filter-group"><label for="fCourse">Course</label><select id="fCourse"></select></div>
+      <div class="filter-group"><label for="fSem">Semester</label><select id="fSem"></select></div>
+      <div class="filter-group"><label for="fSubject">Subject (allotted to you)</label><select id="fSubject"></select></div>
+    </div>
+    <div class="ctx" id="ctx"></div>
+
+    <div id="workArea" style="display:none;">
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="marks">Enter Marks</button>
+        <button type="button" class="tab" data-tab="assess">Manage Assessments</button>
+        <button type="button" class="tab" data-tab="sheet">Class Sheet &amp; Totals</button>
+      </div>
+
+      <!-- ENTER MARKS: pick student, type marks -->
+      <div class="pane active" id="pane-marks">
+        <div class="split">
+          <div class="panel">
+            <h3>Students</h3>
+            <input type="text" id="search" placeholder="Search name or reg no">
+            <div class="stu-list" id="stuList"></div>
+          </div>
+          <div class="panel" id="markPanel"></div>
+        </div>
+      </div>
+
+      <!-- MANAGE ASSESSMENTS -->
+      <div class="pane" id="pane-assess">
+        <div class="panel">
+          <h3 id="aFormTitle">Add Assessment</h3>
+          <div class="add-form">
+            <div><label for="aCat">Type</label>
+              <select id="aCat">
+                <option>Internal Exam</option><option>Quiz</option><option>Assignment</option>
+                <option>Activity</option><option>Case Study</option><option>Semester Exam</option><option>Other</option>
+              </select></div>
+            <div><label for="aTitle">Name / Title</label><input type="text" id="aTitle" maxlength="100" placeholder="e.g. IA 1, Quiz 2, Case Study on ERP"></div>
+            <div><label for="aMax">Maximum Marks</label><input type="number" id="aMax" min="1" max="1000" step="0.5" value="20"></div>
+            <div class="btn-row"><button type="button" class="btn-primary" id="aSave">Add</button><button type="button" class="btn-light" id="aCancel" style="display:none;">Cancel</button></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Title</th><th>Type</th><th>Max Marks</th><th>Marks Entered</th><th>Actions</th></tr></thead>
+              <tbody id="aBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLASS SHEET -->
+      <div class="pane" id="pane-sheet">
+        <div class="btn-row" style="margin-bottom:12px;"><button type="button" class="btn-green" id="csvBtn">Export CSV</button></div>
+        <div class="table-wrap"><table id="sheetTable"></table></div>
+        <p class="hint">Grade scale on percentage of total: A+ 90+, A 80+, B+ 70+, B 60+, C 50+, D 40+, F below 40. A grade shows only after every assessment has marks for the student.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="/components/portal.js"></script>
+  <script>
+    initPortal({ sidebar: '/components/sidebar.html', role: 'faculty', defaultPage: 'grades.html' });
+
+    const $ = id => document.getElementById(id);
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const fmt = n => String(+Number(n).toFixed(2));
+    const J = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    let subjects = [], sheet = null, subjectId = null, studentId = null, dirty = false, editingA = null;
+    const marks = new Map();                         // "assessmentId|studentId" -> number
+
+    async function api(url, options) {
+      const res = await fetch(url, options);
+      if (res.status === 401) { window.location.href = '/auth/login.html'; throw new Error('Session expired'); }
+      try { return await res.json(); }
+      catch { throw new Error('Unexpected server response (' + res.status + ')'); }
+    }
+
+    /* ---------- grading ---------- */
+    function gradeOf(pct) { return pct >= 90 ? 'A+' : pct >= 80 ? 'A' : pct >= 70 ? 'B+' : pct >= 60 ? 'B' : pct >= 50 ? 'C' : pct >= 40 ? 'D' : 'F'; }
+    function gradeClass(g) { return g === '-' ? 'g-none' : (g === 'F' || g === 'D') ? 'g-bad' : (g === 'C' || g === 'B') ? 'g-mid' : 'g-good'; }
+    function totalsFor(sid, override) {
+      let got = 0, max = 0, pending = 0;
+      sheet.assessments.forEach(a => {
+        max += a.max_marks;
+        const v = override ? override[a.id] : marks.get(a.id + '|' + sid);
+        if (v === undefined || v === null || Number.isNaN(v)) pending++; else got += v;
+      });
+      const pct = max ? got * 100 / max : 0;
+      const grade = (max && !pending) ? gradeOf(pct) : '-';
+      return { got, max, pending, pct, grade };
+    }
+
+    /* ---------- filters ---------- */
+    function fillSelect(sel, items, label) {
+      sel.innerHTML = items.length ? `<option value="">${label}</option>` + items.map(i => `<option value="${esc(i.v)}">${esc(i.t)}</option>`).join('')
+                                   : `<option value="">${label === 'Select course' ? 'No subjects allotted to you' : 'Nothing available'}</option>`;
+      if (items.length === 1) sel.value = items[0].v;
+    }
+    function fillCourses() {
+      fillSelect($('fCourse'), [...new Set(subjects.map(s => s.course_code))].map(c => ({ v: c, t: c })), 'Select course');
+      fillSems();
+    }
+    function fillSems() {
+      const c = $('fCourse').value;
+      const sems = [...new Set(subjects.filter(s => s.course_code === c).map(s => Number(s.semester)))].sort((a, b) => a - b);
+      fillSelect($('fSem'), sems.map(s => ({ v: s, t: 'Semester ' + s })), 'Select semester');
+      fillSubjects();
+    }
+    function fillSubjects() {
+      const c = $('fCourse').value, sem = Number($('fSem').value);
+      const list = subjects.filter(s => s.course_code === c && Number(s.semester) === sem);
+      fillSelect($('fSubject'), list.map(s => ({ v: s.id, t: s.subject_code + ' - ' + s.subject_name })), 'Select subject');
+      onSubject();
+    }
+
+    async function onSubject() {
+      subjectId = Number($('fSubject').value) || null;
+      studentId = null; dirty = false; sheet = null;
+      $('workArea').style.display = subjectId ? 'block' : 'none';
+      $('ctx').textContent = '';
+      if (subjectId) await loadSheet();
+    }
+
+    async function loadSheet() {
+      const r = await api('/api/my/grades/sheet?subject_id=' + subjectId);
+      if (!r.success) { alert(r.message || 'Could not load.'); return; }
+      sheet = r;
+      marks.clear();
+      r.marks.forEach(m => marks.set(m.assessment_id + '|' + m.student_id, m.marks));
+      $('ctx').textContent = `${r.subject.course_code} | Semester ${r.subject.semester} | ${r.subject.subject_code} - ${r.subject.subject_name} | ${r.students.length} student(s), ${r.assessments.length} assessment(s)`;
+      renderAll();
+    }
+
+    function renderAll() { renderStudents(); renderMarkPanel(); renderAssess(); renderSheet(); }
+
+    /* ---------- students + marks entry ---------- */
+    function filteredStudents() {
+      const t = $('search').value.trim().toLowerCase();
+      return sheet.students.filter(s => !t || s.registration_no.toLowerCase().includes(t) || s.full_name.toLowerCase().includes(t));
+    }
+    function renderStudents() {
+      const list = filteredStudents();
+      $('stuList').innerHTML = list.length ? list.map(s => {
+        const t = totalsFor(s.id);
+        return `<div class="stu ${s.id === studentId ? 'active' : ''}" data-id="${s.id}">
+          <div><b>${esc(s.full_name)}</b><small>${esc(s.registration_no)}</small></div>
+          <span class="tot">${t.max ? fmt(t.got) + '/' + fmt(t.max) : '-'}${t.pending && t.max ? ' *' : ''}</span></div>`;
+      }).join('') : '<p class="hint">No students match.</p>';
+    }
+
+    function renderMarkPanel() {
+      const p = $('markPanel');
+      if (!sheet.students.length) { p.innerHTML = '<div class="placeholder">No students are enrolled in this course and semester.</div>'; return; }
+      if (!sheet.assessments.length) {
+        p.innerHTML = '<div class="placeholder">No assessments yet. Open <b>Manage Assessments</b> and add an internal exam, quiz, assignment, etc.</div>'; return;
+      }
+      const s = sheet.students.find(x => x.id === studentId);
+      if (!s) { p.innerHTML = '<div class="placeholder">Select a student from the list to enter marks.</div>'; return; }
+      p.innerHTML = `
+        <h3>${esc(s.full_name)} <span class="max">${esc(s.registration_no)}</span></h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Assessment</th><th>Type</th><th>Marks</th></tr></thead>
+          <tbody>${sheet.assessments.map(a => {
+            const v = marks.get(a.id + '|' + s.id);
+            return `<tr><td><strong>${esc(a.title)}</strong></td><td><span class="badge">${esc(a.category)}</span></td>
+              <td><input type="number" class="mark-in" data-a="${a.id}" data-max="${a.max_marks}" min="0" max="${a.max_marks}" step="0.01" value="${v ?? ''}"><span class="max">/ ${fmt(a.max_marks)}</span></td></tr>`;
+          }).join('')}</tbody></table></div>
+        <div class="totals" id="liveTotals"></div>
+        <div class="btn-row">
+          <button type="button" class="btn-primary" id="saveBtn">Save Marks</button>
+          <button type="button" class="btn-green" id="saveNextBtn">Save &amp; Next Student</button>
+          <span class="ok-msg" id="saveMsg"></span>
+        </div>
+        <p class="hint">Leave a box empty if the marks are not available yet.</p>`;
+      liveTotals();
+    }
+
+    function readInputs() {
+      const values = {}; let bad = false;
+      document.querySelectorAll('.mark-in').forEach(inp => {
+        const a = Number(inp.dataset.a), max = Number(inp.dataset.max), raw = inp.value.trim();
+        if (raw === '') { values[a] = null; inp.classList.remove('over'); return; }
+        const n = Number(raw);
+        const over = Number.isNaN(n) || n < 0 || n > max;
+        inp.classList.toggle('over', over);
+        if (over) bad = true; else values[a] = n;
+      });
+      return { values, bad };
+    }
+
+    function liveTotals() {
+      const { values } = readInputs();
+      const t = totalsFor(studentId, values);
+      $('liveTotals').innerHTML = `
+        <div class="tbox"><span>GRAND TOTAL</span><b>${fmt(t.got)} / ${fmt(t.max)}</b></div>
+        <div class="tbox"><span>PERCENTAGE</span><b>${t.max ? t.pct.toFixed(1) : '0.0'}%</b></div>
+        <div class="tbox"><span>GRADE</span><b><span class="pill ${gradeClass(t.grade)}">${t.grade === '-' ? (t.pending ? t.pending + ' pending' : '-') : t.grade}</span></b></div>`;
+    }
+
+    async function saveMarks(goNext) {
+      const { values, bad } = readInputs();
+      if (bad) { alert('Some marks are invalid. Marks must be between 0 and the maximum shown.'); return; }
+      const entries = Object.keys(values).map(a => ({ assessment_id: Number(a), student_id: studentId, marks: values[a] }));
+      const btns = [$('saveBtn'), $('saveNextBtn')];
+      btns.forEach(b => b.disabled = true);
+      try {
+        const r = await api('/api/my/grades/marks', J('POST', { subject_id: subjectId, entries }));
+        if (!r.success) { alert(r.message || 'Could not save.'); return; }
+        entries.forEach(e => {
+          const k = e.assessment_id + '|' + e.student_id;
+          if (e.marks === null) marks.delete(k); else marks.set(k, e.marks);
+        });
+        dirty = false;
+        renderStudents(); renderSheet(); renderAssess();
+        if (goNext) {
+          const list = filteredStudents(), i = list.findIndex(s => s.id === studentId);
+          if (i >= 0 && i < list.length - 1) { studentId = list[i + 1].id; renderStudents(); renderMarkPanel(); return; }
+        }
+        liveTotals();
+        $('saveMsg').textContent = 'Saved!';
+      } catch (err) { alert(err.message); }
+      finally { btns.forEach(b => b && (b.disabled = false)); }
+    }
+
+    /* ---------- assessments ---------- */
+    function renderAssess() {
+      $('aBody').innerHTML = sheet.assessments.length ? sheet.assessments.map(a => {
+        const n = sheet.students.filter(s => marks.has(a.id + '|' + s.id)).length;
+        return `<tr><td><strong>${esc(a.title)}</strong></td><td><span class="badge">${esc(a.category)}</span></td>
+          <td>${fmt(a.max_marks)}</td><td>${n} of ${sheet.students.length}</td>
+          <td><button type="button" class="edit-btn" data-act="edit" data-id="${a.id}">Edit</button>
+              <button type="button" class="delete-btn" data-act="del" data-id="${a.id}">Delete</button></td></tr>`;
+      }).join('') : '<tr><td colspan="5" class="empty">No assessments yet. Add one above.</td></tr>';
+    }
+
+    function resetAForm() {
+      editingA = null;
+      $('aTitle').value = ''; $('aMax').value = '20'; $('aCat').selectedIndex = 0;
+      $('aFormTitle').textContent = 'Add Assessment'; $('aSave').textContent = 'Add'; $('aCancel').style.display = 'none';
+    }
+
+    async function saveAssessment() {
+      const body = { subject_id: subjectId, title: $('aTitle').value.trim(), category: $('aCat').value, max_marks: $('aMax').value };
+      if (!body.title) { alert('Enter a name for the assessment.'); return; }
+      const r = await api(editingA ? '/api/my/grades/assessments/' + editingA : '/api/my/grades/assessments', J(editingA ? 'PUT' : 'POST', body));
+      if (!r.success) { alert(r.message || 'Could not save.'); return; }
+      resetAForm();
+      await loadSheet();
+    }
+
+    /* ---------- class sheet ---------- */
+    function renderSheet() {
+      const A = sheet.assessments;
+      let head = '<thead><tr><th>Reg No</th><th>Name</th>' + A.map(a => `<th>${esc(a.title)}<br><small>/${fmt(a.max_marks)}</small></th>`).join('') + '<th>Total</th><th>%</th><th>Grade</th></tr></thead>';
+      let body = sheet.students.map(s => {
+        const t = totalsFor(s.id);
+        return `<tr><td><code>${esc(s.registration_no)}</code></td><td><strong>${esc(s.full_name)}</strong></td>` +
+          A.map(a => { const v = marks.get(a.id + '|' + s.id); return `<td>${v === undefined ? '-' : fmt(v)}</td>`; }).join('') +
+          `<td><strong>${fmt(t.got)} / ${fmt(t.max)}</strong></td><td>${t.max ? t.pct.toFixed(1) : '-'}</td>
+           <td><span class="pill ${gradeClass(t.grade)}">${t.grade}</span></td></tr>`;
+      }).join('') || `<tr><td colspan="${A.length + 5}" class="empty">No students.</td></tr>`;
+      $('sheetTable').innerHTML = head + '<tbody>' + body + '</tbody>';
+    }
+
+    function exportCsv() {
+      const A = sheet.assessments, q = v => '"' + String(v).replace(/"/g, '""') + '"';
+      const rows = [['Reg No', 'Name', ...A.map(a => `${a.title} (/${fmt(a.max_marks)})`), 'Total', 'Max Total', 'Percentage', 'Grade']];
+      sheet.students.forEach(s => {
+        const t = totalsFor(s.id);
+        rows.push([s.registration_no, s.full_name, ...A.map(a => { const v = marks.get(a.id + '|' + s.id); return v === undefined ? '' : fmt(v); }),
+          fmt(t.got), fmt(t.max), t.max ? t.pct.toFixed(2) : '', t.grade === '-' ? '' : t.grade]);
+      });
+      const blob = new Blob(['\ufeff' + rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `marks_${sheet.subject.course_code}_sem${sheet.subject.semester}_${sheet.subject.subject_code}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    /* ---------- events ---------- */
+    $('fCourse').addEventListener('change', fillSems);
+    $('fSem').addEventListener('change', fillSubjects);
+    $('fSubject').addEventListener('change', onSubject);
+    $('search').addEventListener('input', () => sheet && renderStudents());
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+      document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + t.dataset.tab));
+    }));
+    $('stuList').addEventListener('click', e => {
+      const el = e.target.closest('.stu[data-id]'); if (!el) return;
+      const id = Number(el.dataset.id);
+      if (id === studentId) return;
+      if (dirty && !confirm('You have unsaved marks for this student. Switch anyway?')) return;
+      studentId = id; dirty = false; renderStudents(); renderMarkPanel();
+    });
+    $('markPanel').addEventListener('input', e => {
+      if (!e.target.matches('.mark-in')) return;
+      dirty = true; if ($('saveMsg')) $('saveMsg').textContent = ''; liveTotals();
+    });
+    $('markPanel').addEventListener('click', e => {
+      if (e.target.id === 'saveBtn') saveMarks(false);
+      else if (e.target.id === 'saveNextBtn') saveMarks(true);
+    });
+    $('aSave').addEventListener('click', saveAssessment);
+    $('aCancel').addEventListener('click', resetAForm);
+    $('aBody').addEventListener('click', async e => {
+      const b = e.target.closest('button[data-act]'); if (!b) return;
+      const a = sheet.assessments.find(x => x.id === Number(b.dataset.id)); if (!a) return;
+      if (b.dataset.act === 'edit') {
+        editingA = a.id;
+        $('aTitle').value = a.title; $('aCat').value = a.category; $('aMax').value = a.max_marks;
+        $('aFormTitle').textContent = 'Edit Assessment'; $('aSave').textContent = 'Update'; $('aCancel').style.display = 'inline-block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (confirm(`Delete "${a.title}"? All marks entered for it will be removed.`)) {
+        const r = await api('/api/my/grades/assessments/' + a.id, { method: 'DELETE' });
+        if (!r.success) alert(r.message || 'Could not delete.');
+        await loadSheet();
+      }
+    });
+    $('csvBtn').addEventListener('click', exportCsv);
+
+    (async () => {
+      const r = await api('/api/my/subjects');
+      subjects = r.success ? r.subjects : [];
+      fillCourses();
+    })();
+  </script>
+</body>
+</html>

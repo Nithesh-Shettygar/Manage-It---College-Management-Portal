@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IoT Control Center - Admin Portal</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 700px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #007bff; margin-bottom: 5px; text-align: center; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; text-align: center; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 5px solid #007bff; text-align: left; }
+        .card h3 { margin: 0 0 8px 0; font-size: 16px; color: #495057; }
+        .card p { margin: 0; font-size: 18px; font-weight: bold; color: #212529; }
+        .section-title { font-size: 18px; margin: 20px 0 10px 0; text-align: left; border-bottom: 2px solid #e9ecef; padding-bottom: 5px; color: #343a40; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .btn { flex: 1; padding: 12px; font-size: 14px; font-weight: bold; color: white; background: #6c757d; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; text-align: center; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .btn-on { background: #28a745; }
+        .btn-off { background: #dc3545; }
+        .btn-auto { background: #17a2b8; }
+    </style>
+    <script>
+        function sendCommand(url) {
+            fetch(url)
+                .then(response => response.json())
+                .then(data => { console.log("Command executed", data); })
+                .catch(err => console.error("Error executing command", err));
+        }
+
+        function updateDashboard() {
+            fetch('/get_sensor_data')
+                .then(response => response.json())
+                .then(data => {
+                    if(data.error) {
+                        document.getElementById('connection-status').innerText = "Disconnected from ESP32!";
+                        document.getElementById('connection-status').style.color = "red";
+                        return;
+                    }
+                    document.getElementById('connection-status').innerText = "Connected Live";
+                    document.getElementById('connection-status').style.color = "green";
+                    
+                    document.getElementById('mode').innerText = data.mode ? data.mode.toUpperCase() : '--';
+                    document.getElementById('pir').innerText = data.pir == 1 ? 'Motion Detected' : 'Clear';
+                    document.getElementById('ldrVal').innerText = data.ldrVal || 0;
+                    document.getElementById('ldrState').innerText = data.ldrState || '--';
+                    document.getElementById('temp').innerText = (data.temp || '--') + ' °C';
+                    document.getElementById('hum').innerText = (data.hum || '--') + ' %';
+                    document.getElementById('led').innerText = data.led || '--';
+                    document.getElementById('relay').innerText = data.relay || '--';
+                }).catch(err => {
+                    document.getElementById('connection-status').innerText = "Error connecting to backend/ESP32";
+                    document.getElementById('connection-status').style.color = "red";
+                });
+        }
+        setInterval(updateDashboard, 1500);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h2>ESP32 IoT Control Center</h2>
+        <div class="subtitle">Status: <span id="connection-status" style="font-weight:bold; color: orange;">Connecting...</span></div>
+
+        <!-- Automatic Operating Mode Controls -->
+        <div class="section-title">Automatic Operating Modes (Toggle)</div>
+        <div class="btn-group">
+            <button onclick="sendCommand('/set_mode?mode=pir')" class="btn btn-auto">PIR Motion Mode</button>
+            <button onclick="sendCommand('/set_mode?mode=ldr')" class="btn btn-auto">LDR Light Mode</button>
+        </div>
+
+        <!-- Manual Override Controls -->
+        <div class="section-title">Manual Overrides & Control</div>
+        
+        <p style="text-align: left; font-size: 14px; font-weight: bold; margin: 5px 0;">LED Manual Control:</p>
+        <div class="btn-group">
+            <button onclick="sendCommand('/control?device=led&action=on')" class="btn btn-on">Turn LED ON</button>
+            <button onclick="sendCommand('/control?device=led&action=off')" class="btn btn-off">Turn LED OFF</button>
+            <button onclick="sendCommand('/control?device=led&action=auto')" class="btn btn-auto">LED Auto</button>
+        </div>
+
+        <p style="text-align: left; font-size: 14px; font-weight: bold; margin: 5px 0;">Relay / Fan Manual Control:</p>
+        <div class="btn-group">
+            <button onclick="sendCommand('/control?device=relay&action=on')" class="btn btn-on">Turn Relay ON</button>
+            <button onclick="sendCommand('/control?device=relay&action=off')" class="btn btn-off">Turn Relay OFF</button>
+            <button onclick="sendCommand('/control?device=relay&action=auto')" class="btn btn-auto">Relay Auto</button>
+        </div>
+
+        <!-- Live Sensor Grid -->
+        <div class="section-title">Live Sensor Dashboard</div>
+        <div class="grid">
+            <div class="card">
+                <h3>Operating Mode</h3>
+                <p id="mode">--</p>
+            </div>
+            <div class="card">
+                <h3>PIR Motion</h3>
+                <p id="pir">--</p>
+            </div>
+            <div class="card">
+                <h3>LDR Reading</h3>
+                <p><span id="ldrVal">0</span> (<span id="ldrState">--</span>)</p>
+            </div>
+            <div class="card">
+                <h3>Temperature</h3>
+                <p id="temp">-- °C</p>
+            </div>
+            <div class="card">
+                <h3>Humidity</h3>
+                <p id="hum">-- %</p>
+            </div>
+            <div class="card">
+                <h3>LED Status</h3>
+                <p id="led">--</p>
+            </div>
+            <div class="card" style="grid-column: span 2;">
+                <h3>Relay (Fan) Status</h3>
+                <p id="relay">--</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

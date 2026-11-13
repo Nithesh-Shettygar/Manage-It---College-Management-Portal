@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Faculty Allotment | Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #FFF; color: #000; display: flex; min-height: 100vh; }
+    #sidebar-container { display: contents; }
+    aside { width: 260px; background: #FFF; border-right: 2px solid #0047AB; display: flex; flex-direction: column; justify-content: space-between; padding: 24px; flex-shrink: 0; }
+    .sidebar-brand h2 { font-size: 1.4rem; color: #0047AB; margin-bottom: 6px; }
+    .sidebar-brand p { font-size: .85rem; color: #555; }
+    .sidebar-menu { list-style: none; margin-top: 30px; flex-grow: 1; }
+    .sidebar-menu li { margin-bottom: 12px; }
+    .sidebar-menu a { display: block; padding: 10px 14px; color: #000; text-decoration: none; font-weight: 500; border-radius: 8px; transition: background .2s, color .2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: #0047AB; color: #FFF; }
+    .logout-btn { display: block; padding: 10px 14px; background: #FFF; color: #0047AB; border: 1px solid #0047AB; text-align: center; text-decoration: none; font-weight: 600; border-radius: 8px; transition: all .2s; }
+    .logout-btn:hover { background: #0047AB; color: #FFF; }
+    main { flex-grow: 1; padding: 30px 40px; overflow-y: auto; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+    header h1 { font-size: 1.8rem; }
+    .admin-profile-badge { font-size: .9rem; color: #555; font-weight: 600; }
+    .filter-card { border: 2px solid #0047AB; border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+    .filter-group { flex: 1; min-width: 180px; }
+    .filter-group label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+    .filter-group select { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: .9rem; outline: none; background: #FFF; }
+    .filter-group select:focus { border-color: #0047AB; }
+    .summary { font-weight: 600; color: #0047AB; padding-bottom: 10px; }
+    .hint { font-size: .85rem; color: #64748b; margin-bottom: 14px; }
+    .table-wrap { overflow-x: auto; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0; }
+    th, td { padding: 12px 14px; text-align: left; font-size: .88rem; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
+    th { background: #0047AB; color: #FFF; font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    td select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; min-width: 240px; font-size: .88rem; }
+    td select.assigned { border-color: #34d399; background: #ecfdf5; }
+    .code-badge { background: #f1f5f9; color: #334155; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-family: monospace; font-size: .8rem; border: 1px solid #cbd5e1; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: .75rem; }
+    .theory { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+    .practical { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+    .empty { text-align: center; color: #666; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <main>
+    <header>
+      <h1>Faculty Allotment</h1>
+      <div class="admin-profile-badge">Role: <span data-user="title"></span> | ID: <span data-user="id"></span></div>
+    </header>
+
+    <div class="filter-card">
+      <div class="filter-group"><label for="fCourse">Course</label><select id="fCourse"></select></div>
+      <div class="filter-group"><label for="fSem">Semester</label><select id="fSem"></select></div>
+      <div class="summary" id="summary"></div>
+    </div>
+    <p class="hint">Choose a faculty member for each subject. It saves instantly. That faculty then sees the subject in their timetable and attendance page. One faculty per subject; a faculty cannot be given two subjects that run at the same day and time.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Subject Code</th><th>Subject Name</th><th>Course</th><th>Sem</th><th>Type</th><th>Assigned Faculty</th></tr></thead>
+        <tbody id="body"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/components/portal.js"></script>
+  <script>
+    initPortal({ sidebar: '/components/admin-sidebar.html', role: 'admin', defaultPage: 'assignments.html' });
+
+    const $ = id => document.getElementById(id);
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    let faculty = [], subjects = [];
+
+    async function api(url, options) {
+      const res = await fetch(url, options);
+      if (res.status === 401) { window.location.href = '/auth/login.html'; throw new Error('Session expired'); }
+      try { return await res.json(); }
+      catch { throw new Error('Unexpected server response (' + res.status + ')'); }
+    }
+
+    async function load() {
+      const d = await api('/api/assignments');
+      if (!d.success) { alert(d.message || 'Failed to load.'); return; }
+      faculty = d.faculty; subjects = d.subjects;
+      const keep = $('fCourse').value;
+      const codes = [...new Set(subjects.map(s => s.course_code))];
+      $('fCourse').innerHTML = '<option value="">All Courses</option>' +
+        codes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      if (codes.includes(keep)) $('fCourse').value = keep;
+      fillSems();
+      render();
+    }
+
+    function fillSems() {
+      const keep = $('fSem').value;
+      const code = $('fCourse').value;
+      const sems = [...new Set(subjects.filter(s => !code || s.course_code === code).map(s => Number(s.semester)))].sort((a, b) => a - b);
+      $('fSem').innerHTML = '<option value="">All Semesters</option>' +
+        sems.map(s => `<option value="${s}">Semester ${s}</option>`).join('');
+      if (sems.includes(Number(keep))) $('fSem').value = keep;
+    }
+
+    function render() {
+      const code = $('fCourse').value, sem = Number($('fSem').value) || 0;
+      const list = subjects.filter(s => (!code || s.course_code === code) && (!sem || Number(s.semester) === sem));
+      const done = list.filter(s => s.faculty_id).length;
+      $('summary').textContent = list.length ? `${done} of ${list.length} subjects assigned` : '';
+      $('body').innerHTML = list.length ? list.map(s => `
+        <tr>
+          <td><span class="code-badge">${esc(s.subject_code)}</span></td>
+          <td><strong>${esc(s.subject_name)}</strong></td>
+          <td>${esc(s.course_code)}</td>
+          <td>${esc(s.semester)}</td>
+          <td><span class="badge ${s.subject_type === 'Theory' ? 'theory' : 'practical'}">${esc(s.subject_type)}</span></td>
+          <td><select data-id="${s.id}" class="${s.faculty_id ? 'assigned' : ''}">
+            <option value="">-- Not assigned --</option>
+            ${faculty.map(f => `<option value="${f.id}" ${f.id === s.faculty_id ? 'selected' : ''}>${esc(f.full_name)} (${esc(f.employee_id)})</option>`).join('')}
+          </select></td>
+        </tr>`).join('')
+        : '<tr><td colspan="6" class="empty">No subjects found. Create subjects in Manage Subjects first.</td></tr>';
+    }
+
+    $('body').addEventListener('change', async e => {
+      const sel = e.target.closest('select[data-id]');
+      if (!sel) return;
+      sel.disabled = true;
+      try {
+        const r = await api(`/api/assignments/${sel.dataset.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ faculty_id: sel.value ? Number(sel.value) : null })
+        });
+        if (!r.success) alert(r.message || 'Could not save assignment.');
+      } catch (err) { alert(err.message); }
+      await load();
+    });
+    $('fCourse').addEventListener('change', () => { fillSems(); render(); });
+    $('fSem').addEventListener('change', render);
+
+    load();
+  </script>
+</body>
+</html>
